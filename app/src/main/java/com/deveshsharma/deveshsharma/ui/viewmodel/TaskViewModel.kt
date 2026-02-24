@@ -16,7 +16,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     val allTasks: Flow<List<Task>>
 
     init {
-        val taskDao = TaskDatabase.Companion.getDatabase(application).taskDao()
+        val taskDao = TaskDatabase.getDatabase(application).taskDao()
         repository = TaskRepository(taskDao)
         allTasks = repository.allTasks
     }
