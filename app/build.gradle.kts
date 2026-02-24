@@ -56,10 +56,9 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.accompanist.pager)
-    implementation(libs.accompanist.pager.indicators)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+
 
 
     testImplementation(libs.junit)

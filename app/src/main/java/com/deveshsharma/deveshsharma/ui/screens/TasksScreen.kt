@@ -1,4 +1,4 @@
-package com.deveshsharma.deveshsharma
+package com.deveshsharma.deveshsharma.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.deveshsharma.deveshsharma.data.model.Task
+import com.deveshsharma.deveshsharma.ui.viewmodel.TaskViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +87,13 @@ fun AddTaskDialog(onDismiss: () -> Unit, onTaskAdded: (Task) -> Unit) {
             }
         },
         confirmButton = {
-            Button(onClick = { onTaskAdded(Task(title = title, description = description, status = "Pending")) }) {
+            Button(onClick = { onTaskAdded(
+                Task(
+                    title = title,
+                    description = description,
+                    status = "Pending"
+                )
+            ) }) {
                 Text("Add")
             }
         },

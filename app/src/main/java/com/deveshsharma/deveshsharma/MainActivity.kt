@@ -3,6 +3,7 @@ package com.deveshsharma.deveshsharma
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -20,6 +21,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,8 +38,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.deveshsharma.deveshsharma.ui.screens.InfoScreen
+import com.deveshsharma.deveshsharma.ui.screens.TasksScreen
 import com.deveshsharma.deveshsharma.ui.theme.DeveshSharmaTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,12 +66,20 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen() {
-    val pagerState = rememberPagerState(initialPage = 0) { 2 }
+    val pagerState = rememberPagerState(initialPage = 1) { 3 }
+    val scope = rememberCoroutineScope()
 
-    HorizontalPager(state = pagerState) {
-        when (it) {
-            0 -> AppLauncher()
-            1 -> TasksScreen()
+    LaunchedEffect(pagerState) {
+        scope.launch {
+            pagerState.scrollToPage(1)
+        }
+    }
+
+    HorizontalPager(state = pagerState) { page ->
+        when (page) {
+            0 -> InfoScreen()
+            1 -> AppLauncher()
+            2 -> TasksScreen()
         }
     }
 }
@@ -70,18 +88,40 @@ data class AppInfo(val label: String, val packageName: String, val icon: Drawabl
 
 @Composable
 fun TypingText(texts: List<String>, modifier: Modifier = Modifier) {
-    var displayedText by remember { mutableStateOf("") }
+    var displayedText by rememberSaveable { mutableStateOf("") }
+    var isPaused by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(key1 = texts) {
-        var i = 0
-        while (true) {
-            displayedText = ""
-            texts[i].forEach { char ->
-                delay(100) // Adjust the delay for typing speed
-                displayedText += char
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                isPaused = true
+                Log.d("Lifecycle", "PAUSED")
+            } else if (event == Lifecycle.Event.ON_RESUME) {
+                isPaused = false
+                Log.d("Lifecycle", "RESUMED")
             }
-            i = (i + 1) % texts.size
-            delay(1500) // Wait for 1.5 seconds before restarting
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(key1 = texts, key2 = isPaused) {
+        if (!isPaused) {
+            var i = 0
+            while (true) {
+                displayedText = ""
+                texts[i].forEach { char ->
+                    delay(100)
+                    displayedText += char
+                }
+                i = (i + 1) % texts.size
+                delay(1500)
+                Log.d("TypingEffect", "Running.....")
+            }
         }
     }
 
@@ -103,6 +143,7 @@ fun TypingText(texts: List<String>, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.headlineMedium
     )
 }
+
 
 @Composable
 fun AppLauncher() {
@@ -168,20 +209,19 @@ fun AppLauncher() {
                         val launchIntent = packageManager.getLaunchIntentForPackage(topSuggestion.packageName)
                         context.startActivity(launchIntent)
                     } else if (searchQuery.text.isNotEmpty()) {
+                        val encodedQuery = Uri.encode(searchQuery.text)
                         try {
-                            // Try to open in Copilot app
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                "https://www.bing.com/search?q=${searchQuery.text}".toUri()
+                                "https://www.bing.com/search?q=$encodedQuery".toUri()
                             )
                             intent.setPackage("com.microsoft.copilot")
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            // Fallback to web search in browser if Copilot is not installed or can't handle it
                             Log.e("Devesh", e.toString())
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                "https://www.bing.com/search?q=${searchQuery.text}".toUri()
+                                "https://www.bing.com/search?q=$encodedQuery".toUri()
                             )
                             context.startActivity(intent)
                         }

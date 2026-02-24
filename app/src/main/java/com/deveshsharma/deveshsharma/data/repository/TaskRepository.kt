@@ -1,5 +1,7 @@
-package com.deveshsharma.deveshsharma
+package com.deveshsharma.deveshsharma.data.repository
 
+import com.deveshsharma.deveshsharma.data.dao.TaskDao
+import com.deveshsharma.deveshsharma.data.model.Task
 import kotlinx.coroutines.flow.Flow
 
 class TaskRepository(private val taskDao: TaskDao) {
