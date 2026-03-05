@@ -1,8 +1,6 @@
 package com.deveshsharma.deveshsharma
 
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -21,9 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,11 +37,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.deveshsharma.deveshsharma.data.model.AppInfo
 import com.deveshsharma.deveshsharma.ui.screens.InfoScreen
 import com.deveshsharma.deveshsharma.ui.screens.TasksScreen
 import com.deveshsharma.deveshsharma.ui.theme.DeveshSharmaTheme
+import com.deveshsharma.deveshsharma.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,15 +65,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val pagerState = rememberPagerState(initialPage = 1) { 3 }
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(pagerState) {
-        scope.launch {
-            pagerState.scrollToPage(1)
-        }
-    }
-
-    HorizontalPager(state = pagerState) { page ->
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        beyondViewportPageCount = 1 
+    ) { page ->
         when (page) {
             0 -> InfoScreen()
             1 -> AppLauncher()
@@ -84,22 +79,18 @@ fun MainScreen() {
     }
 }
 
-data class AppInfo(val label: String, val packageName: String, val icon: Drawable)
-
 @Composable
 fun TypingText(texts: List<String>, modifier: Modifier = Modifier) {
     var displayedText by rememberSaveable { mutableStateOf("") }
-    var isPaused by remember { mutableStateOf(false) }
+    var isPaused by rememberSaveable { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 isPaused = true
-                Log.d("Lifecycle", "PAUSED")
             } else if (event == Lifecycle.Event.ON_RESUME) {
                 isPaused = false
-                Log.d("Lifecycle", "RESUMED")
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -120,7 +111,6 @@ fun TypingText(texts: List<String>, modifier: Modifier = Modifier) {
                 }
                 i = (i + 1) % texts.size
                 delay(1500)
-                Log.d("TypingEffect", "Running.....")
             }
         }
     }
@@ -146,29 +136,12 @@ fun TypingText(texts: List<String>, modifier: Modifier = Modifier) {
 
 
 @Composable
-fun AppLauncher() {
+fun AppLauncher(viewModel: AppViewModel = viewModel()) {
     val context = LocalContext.current
     val packageManager = context.packageManager
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
-
-    val appList = remember {
-        val pm = context.packageManager
-        val mainIntent = Intent(Intent.ACTION_MAIN, null).also {
-            it.addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        pm.queryIntentActivities(mainIntent, 0).mapNotNull { resolveInfo ->
-            try {
-                val applicationInfo = pm.getApplicationInfo(resolveInfo.activityInfo.packageName, 0)
-                AppInfo(
-                    label = pm.getApplicationLabel(applicationInfo).toString(),
-                    packageName = applicationInfo.packageName,
-                    icon = pm.getApplicationIcon(applicationInfo)
-                )
-            } catch (_: PackageManager.NameNotFoundException) {
-                null
-            }
-        }.distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
-    }
+    
+    val appList by viewModel.appList.collectAsState()
 
     val homeScreenAppPackages = remember {
         listOf("com.whatsapp", "com.android.chrome", "com.microsoft.copilot", "com.google.android.youtube")
@@ -200,6 +173,7 @@ fun AppLauncher() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
+
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(

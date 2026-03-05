@@ -134,7 +134,31 @@ fun EditTaskDialog(task: Task, onDismiss: () -> Unit, onTaskUpdated: (Task) -> U
 }
 
 @Composable
-fun TaskItem(task: Task, onTaskUpdated: (Task) -> Unit, onTaskDeleted: () -> Unit) {
+fun DeleteTaskDialog(task: Task, onDismiss: () -> Unit, onDeleteConfirmed: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete Task") },
+        text = {
+            Text("Are you sure you want to delete this task?")
+        },
+        confirmButton = {
+            Button(onClick = {
+                onDeleteConfirmed()
+                onDismiss()
+            }) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun TaskItem(task: Task, onTaskUpdated: (Task) -> Unit, onTaskDeleted: (Task) -> Unit) {
     val color = when (task.status) {
         "Pending" -> Color.Yellow
         "In Progress" -> Color.Cyan
@@ -163,7 +187,7 @@ fun TaskItem(task: Task, onTaskUpdated: (Task) -> Unit, onTaskDeleted: () -> Uni
             IconButton(onClick = { onTaskUpdated(task) }) {
                 Icon(Icons.Filled.Edit, contentDescription = "Edit Task")
             }
-            IconButton(onClick = onTaskDeleted) {
+            IconButton(onClick = { onTaskDeleted(task) }) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete Task")
             }
         }
@@ -176,6 +200,8 @@ fun TasksScreen(taskViewModel: TaskViewModel = viewModel()) {
     val tasks by taskViewModel.allTasks.collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<Task?>(null) }
+    var showDeleteDialog by remember { mutableStateOf<Task?>(null) }
+
     // Default to true to show the checkbox as checked initially
     var showCompleted by rememberSaveable { mutableStateOf(true) }
 
@@ -237,7 +263,7 @@ fun TasksScreen(taskViewModel: TaskViewModel = viewModel()) {
                         TaskItem(
                             task = task,
                             onTaskUpdated = { showEditDialog = it },
-                            onTaskDeleted = { taskViewModel.delete(task) }
+                            onTaskDeleted = { showDeleteDialog = it }
                         )
                     }
                 }
@@ -254,6 +280,16 @@ fun TasksScreen(taskViewModel: TaskViewModel = viewModel()) {
             )
         }
 
+        showDeleteDialog?.let { task ->
+            DeleteTaskDialog(
+                task = task,
+                onDismiss = { showDeleteDialog = null },
+                onDeleteConfirmed = {
+                    taskViewModel.delete(task)
+                }
+            )
+        }
+
         showEditDialog?.let { task ->
             EditTaskDialog(
                 task = task,
@@ -266,4 +302,3 @@ fun TasksScreen(taskViewModel: TaskViewModel = viewModel()) {
         }
     }
 }
-
